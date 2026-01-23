@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Invigilation System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .camera-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .alerts-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .camera-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .video-header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+
+        .video-title {
+            color: white;
+            font-weight: 600;
+        }
+
+        .camera-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-inactive {
+            background: #dc3545;
+            color: white;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .no-cameras {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading cursor */
+        .loading-cursor {
+            cursor: wait;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Exam Invigilation System</h1>
+            <p class="subtitle">Real-time AI-Powered Exam Monitoring</p>
+        </header>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="total-alerts">0</div>
+                <div class="stat-label">Total Alerts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="cheating-alerts">0</div>
+                <div class="stat-label">Cheating Detected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="unreviewed-alerts">0</div>
+                <div class="stat-label">Unreviewed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="active-cameras">0</div>
+                <div class="stat-label">Active Cameras</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="camera-panel">
+                <h2 class="panel-title">📹 Camera Management</h2>
+                
+                <!-- First Method: Add Camera by ID -->
+                <div class="camera-form">
+                    <form id="camera-id-form">
+                        <div class="form-group">
+                            <label for="camera_id">Camera ID:</label>
+                            <input type="number" id="camera_id" placeholder="Enter camera ID" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">Location:</label>
+                            <input type="text" id="location" placeholder="Enter location" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Add Camera by ID
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Second Method: Add Camera from Dropdown -->
+                <div class="camera-form">
+                    <form id="camera-select-form">
+                        <div class="form-group">
+                            <label for="camera_select">Choose a Camera:</label>
+                            <select id="camera_select" required>
+                                <option value="">Loading cameras...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="location_select">Location:</label>
+                            <input type="text" id="location_select" placeholder="Enter location" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Add Camera from Dropdown
+                        </button>
+                    </form>
+                </div>
+
+                <div class="camera-list">
+                    <h3 style="margin-bottom: 10px; color: #333;">Registered Cameras</h3>
+                    <div id="camera-list-container">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading cameras...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3 class="panel-title">📺 Live Video Feeds</h3>
+                    <div class="video-grid" id="video-feeds">
+                        <div class="no-cameras">
+                            <p>No cameras registered yet. Add a camera above to start monitoring.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alerts-panel">
+                <h2 class="panel-title">🚨 Recent Alerts</h2>
+                <div id="alerts-container">
+                    <div class="no-alerts">No alerts yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+        let cameras = {};
+        let alerts = [];
+
+        // Load available cameras on page load
+        window.onload = function() {
+            loadAvailableCameras();
+            loadInitialData();
+        };
+
+        function loadAvailableCameras() {
+            const cameraSelect = document.getElementById('camera_select');
+            cameraSelect.disabled = true; // Disable the dropdown while loading
+            cameraSelect.innerHTML = '<option value="">Loading cameras...</option>'; // Show loading message
+
+            fetch('/api/available_cameras')  // Fetch available cameras
+                .then(response => response.json())
+                .then(data => {
+                    cameraSelect.innerHTML = ''; // Clear previous options
+                    data.cameras.forEach(camera => {
+                        const option = document.createElement('option');
+                        option.value = camera;
+                        option.textContent = `Camera ${camera}`;
+                        cameraSelect.appendChild(option);
+                    });
+                    cameraSelect.disabled = false; // Enable the dropdown after loading
+                })
+                .catch(error => {
+                    console.error('Error loading available cameras:', error);
+                    cameraSelect.innerHTML = '<option value="">Error loading cameras</option>'; // Show error message
+                });
+        }
+
+        // Load initial data
+        function loadInitialData() {
+            loadStats();
+            loadCameras();
+            loadAlerts();
+            
+            // Refresh data periodically
+            setInterval(loadStats, 5000);
+            setInterval(loadCameras, 10000);
+        }
+
+        // Load statistics
+        function loadStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-alerts').textContent = data.total_alerts || 0;
+                    document.getElementById('cheating-alerts').textContent = data.cheating_alerts || 0;
+                    document.getElementById('unreviewed-alerts').textContent = data.unreviewed_alerts || 0;
+                    document.getElementById('active-cameras').textContent = data.active_cameras || 0;
+                })
+                .catch(error => console.error('Error loading stats:', error));
+        }
+
+        // Load cameras
+        function loadCameras() {
+            fetch('/api/cameras')
+                .then(response => response.json())
+                .then(data => {
+                    cameras = {};
+                    data.cameras.forEach(cam => {
+                        cameras[cam.camera_id] = cam;
+                    });
+                    displayCameraList();
+                })
+                .catch(error => {
+                    console.error('Error loading cameras:', error);
+                    document.getElementById('camera-list-container').innerHTML = 
+                        '<div class="no-cameras">Error loading cameras</div>';
+                });
+        }
+
+        // Display camera list
+        function displayCameraList() {
+            const container = document.getElementById('camera-list-container');
+            const cameraList = Object.values(cameras);
+            
+            if (cameraList.length === 0) {
+                container.innerHTML = '<div class="no-cameras">No cameras registered</div>';
+                return;
+            }
+
+            container.innerHTML = cameraList.map(cam => `
+                <div class="camera-item">
+                    <div class="camera-info">
+                        <div class="camera-name">
+                            Camera ${cam.camera_id}
+                            <span class="camera-status ${cam.running ? 'status-active' : 'status-inactive'}">
+                                ${cam.running ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div class="camera-details">
+                            Source: ${cam.source} | FPS: ${cam.fps || 0} | 
+                            ${cam.has_frame ? '📹 Streaming' : '⏸️ No frames'}
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeCamera(${cam.camera_id})">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Load alerts
+        function loadAlerts() {
+            fetch('/api/alerts?limit=20')
+                .then(response => response.json())
+                .then(data => {
+                    alerts = data;
+                    displayAlerts();
+                })
+                .catch(error => console.error('Error loading alerts:', error));
+        }
+
+        // Display alerts
+        function displayAlerts() {
+            const container = document.getElementById('alerts-container');
+            
+            if (alerts.length === 0) {
+                container.innerHTML = '<div class="no-alerts">No alerts yet</div>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => {
+                const date = new Date(alert.timestamp);
+                const isCheating = alert.behavior === 'Cheating Detected';
+                
+                return `
+                    <div class="alert-item ${isCheating ? 'alert-danger' : ''}">
+                        <div class="alert-header">
+                            <span class="alert-title">
+                                ${isCheating ? '🚨' : 'ℹ️'} ${alert.behavior}
+                            </span>
+                            <span class="alert-time">${date.toLocaleTimeString()}</span>
+                        </div>
+                        <div class="alert-details">
+                            <strong>Student:</strong> ${alert.student_id}<br>
+                            <strong>Camera:</strong> ${alert.camera_id}<br>
+                            <strong>Confidence:</strong> ${(alert.confidence * 100).toFixed(1)}%
+                        </div>
+                        ${!alert.reviewed_status ? `
+                            <div class="alert-actions">
+                                <button class="btn btn-success" onclick="reviewAlert(${alert.incident_id})">
+                                    ✓ Mark Reviewed
+                                </button>
+                            </div>
+                        ` : '<div style="color: #28a745; font-size: 0.9em;">✓ Reviewed</div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Camera ID form submission
+        document.getElementById('camera-id-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const cameraId = document.getElementById('camera_id').value;
+            const location = document.getElementById('location').value;
+
+            if (!cameraId) {
+                showToast('Please enter a camera ID', 'error');
+                return;
+            }
+
+            showToast('Adding camera...', 'info');
+
+            fetch('/api/cameras', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ camera_id: cameraId, location: location })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Camera ${cameraId} added successfully!`, 'success');
+                    document.getElementById('camera-id-form').reset();
+                    loadCameras();
+                    addVideoFeed(cameraId);
+                    loadStats();
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding camera:', error);
+                showToast('Failed to add camera: ' + error.message, 'error');
+            });
+        });
+
+        // Camera select form submission
+        document.getElementById('camera-select-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const cameraId = document.getElementById('camera_select').value;
+            const location = document.getElementById('location_select').value;
+
+            if (!cameraId) {
+                showToast('Please select a camera', 'error');
+                return;
+            }
+
+            showToast('Adding camera...', 'info');
+
+            fetch('/api/cameras', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ camera_id: cameraId, location: location })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Camera ${cameraId} added successfully!`, 'success');
+                    document.getElementById('camera-select-form').reset();
+                    loadCameras();
+                    addVideoFeed(cameraId);
+                    loadStats();
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding camera:', error);
+                showToast('Failed to add camera: ' + error.message, 'error');
+            });
+        });
+
+        // Add video feed
+        function addVideoFeed(cameraId) {
+            const videoFeeds = document.getElementById('video-feeds');
+            
+            // Remove "no cameras" message
+            const noCameras = videoFeeds.querySelector('.no-cameras');
+            if (noCameras) {
+                noCameras.remove();
+            }
+
+            // Check if feed already exists
+            if (document.getElementById(`video-container-${cameraId}`)) {
+                return;
+            }
+
+            const videoContainer = document.createElement('div');
+            videoContainer.className = 'video-container';
+            videoContainer.id = `video-container-${cameraId}`;
+            videoContainer.innerHTML = `
+                <div class="video-header">
+                    <span class="video-title">Camera ${cameraId}</span>
+                    <span class="camera-status status-active">Live</span>
+                </div>
+                <img class="video-feed" src="/video_feed/${cameraId}" alt="Camera ${cameraId} Feed">
+                <div class="video-controls">
+                    <button class="btn btn-danger" onclick="removeCamera(${cameraId})">
+                        Remove Camera
+                    </button>
+                </div>
+            `;
+            
+            videoFeeds.appendChild(videoContainer);
+
+            // Handle image load errors
+            const imgElement = videoContainer.querySelector('.video-feed');
+            imgElement.onerror = function() {
+                console.error(`Error loading video feed for camera ${cameraId}`);
+                this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="640" height="480"%3E%3Crect fill="%23333" width="640" height="480"/%3E%3Ctext x="50%25" y="50%25" fill="white" text-anchor="middle"%3ECamera ${cameraId} - Loading...%3C/text%3E%3C/svg%3E';
+            };
+        }
+
+        // Remove camera
+        function removeCamera(cameraId) {
+            if (!confirm(`Are you sure you want to remove Camera ${cameraId}?`)) {
+                return;
+            }
+
+            fetch(`/api/cameras/${cameraId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Camera ${cameraId} removed`, 'success');
+                    
+                    // Remove video feed
+                    const videoContainer = document.getElementById(`video-container-${cameraId}`);
+                    if (videoContainer) {
+                        videoContainer.remove();
+                    }
+
+                    // Check if no cameras left
+                    const videoFeeds = document.getElementById('video-feeds');
+                    if (videoFeeds.children.length === 0) {
+                        videoFeeds.innerHTML = '<div class="no-cameras">No cameras registered yet. Add a camera above to start monitoring.</div>';
+                    }
+
+                    loadCameras();
+                    loadStats();
+                } else {
+                    showToast('Error removing camera', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error removing camera:', error);
+                showToast('Failed to remove camera', 'error');
+            });
+        }
+
+        // Review alert
+        function reviewAlert(incidentId) {
+            fetch(`/api/alerts/${incidentId}/review`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Alert marked as reviewed', 'success');
+                    loadAlerts();
+                    loadStats();
+                } else {
+                    showToast('Error reviewing alert', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error reviewing alert:', error);
+                showToast('Failed to review alert', 'error');
+            });
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                info: '#667eea',
+                warning: '#ffc107'
+            };
+            
+            toast.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
+            toast.innerHTML = `<strong>${message}</strong>`;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Request periodic updates
+        setInterval(() => {
+            socket.emit('request_stats');
+            socket.emit('request_camera_status');
+        }, 10000);
+    </script>
+</body>
+</html>

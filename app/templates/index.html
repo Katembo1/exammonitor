@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Invigilation System - Real-Time Monitoring</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <h1>Exam Invigilation System</h1>
+                    <p class="subtitle">Real-Time Cheating Detection Dashboard</p>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <button id="soundToggle" class="control-btn" title="Toggle Alert Sound">
+                    <svg id="soundIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                </button>
+                
+                <button id="monitoringToggle" class="control-btn monitoring-active" title="Toggle Monitoring">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                    <span id="monitoringText">Active</span>
+                </button>
+                
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Live</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <section class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon alert-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div>
+                <p class="stat-label">Total Alerts</p>
+                <p class="stat-value" id="totalAlerts">0</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon students-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="stat-label">Active Cameras</p>
+                <p class="stat-value" id="activeCameras">0</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon flagged-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                    <line x1="4" y1="22" x2="4" y2="15"></line>
+                </svg>
+            </div>
+            <div>
+                <p class="stat-label">Cheating Alerts</p>
+                <p class="stat-value" id="cheatingAlerts">0</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon time-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+            <div>
+                <p class="stat-label">Uptime</p>
+                <p class="stat-value" id="uptime">00:00:00</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Video Feed Section -->
+        <section class="video-section">
+            <div class="section-header">
+                <h2>Live Camera Feeds</h2>
+                <div class="camera-controls">
+                    <button id="addCamera" class="btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Camera
+                    </button>
+                </div>
+            </div>
+            
+            <div class="video-grid" id="videoGrid">
+                <div class="video-container" data-camera="1">
+                    <div class="video-wrapper">
+                        <img src="{{ url_for('main.video_feed', camera_id=1) }}" alt="Camera 1" class="video-feed">
+                        <div class="video-overlay">
+                            <span class="camera-label">Camera 1</span>
+                            <span class="recording-indicator">● REC</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts Sidebar -->
+        <aside class="alerts-sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="live">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                    </svg>
+                    Live Alerts
+                </button>
+                <button class="tab-btn" data-tab="history">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3h18v18H3z"></path>
+                    </svg>
+                    History
+                </button>
+            </div>
+            
+            <!-- Live Alerts Tab -->
+            <div class="tab-content active" id="liveTab">
+                <div class="alerts-header">
+                    <h3>Real-Time Alerts</h3>
+                    <button id="clearAlerts" class="btn-link">Clear All</button>
+                </div>
+                <div class="alerts-container" id="alertsContainer">
+                    <div class="no-alerts">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <p>No alerts yet</p>
+                        <p class="text-muted">System is monitoring...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div class="tab-content" id="historyTab">
+                <div class="alerts-header">
+                    <h3>Historical Incidents</h3>
+                    <button id="exportHistory" class="btn-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export
+                    </button>
+                </div>
+                <div class="history-filters">
+                    <select id="filterBehavior" class="filter-select">
+                        <option value="">All Behaviors</option>
+                        <option value="cheating">Cheating</option>
+                        <option value="good">Good</option>
+                        <option value="normal">Normal</option>
+                    </select>
+                    <select id="filterReviewed" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="false">Unreviewed</option>
+                        <option value="true">Reviewed</option>
+                    </select>
+                </div>
+                <div class="alerts-container" id="historyContainer">
+                    <div class="loading">Loading incidents...</div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Alert Sound -->
+    <audio id="alertSound" preload="auto">
+        <source src="{{ url_for('static', filename='audio/alert.mp3') }}" type="audio/mpeg">
+    </audio>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
